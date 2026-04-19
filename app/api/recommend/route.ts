@@ -15,6 +15,7 @@ const GENRE_LABELS: Record<Genre, string> = {
   hiphop: "ヒップホップ（ジャジーヒップホップ、実験系、クラシックまで）",
   folk: "フォーク/シンガーソングライター",
   citypop: "シティポップ/ネオアコ（日本のシティポップ・渋谷系、スコットランド・イギリス・アメリカ・北欧などのネオアコースティック、AORの影響を受けたポップ全般。台湾・香港・東南アジアのインディーポップも含む。例：山下達郎、竹内まりや、ピチカート・ファイヴ、The Blue Nile、Everything But the Girl、The Field Mice、Prefab Sprout、Phum Viphurit、落日飛車）",
+  lucky: "",
 };
 
 // Randomly pick decade and region to add serendipity
