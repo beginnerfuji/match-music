@@ -1,5 +1,6 @@
 export type Genre =
-  | "indie"
+  | "indierock"
+  | "indiepop"
   | "reggae"
   | "electronic"
   | "jazz"

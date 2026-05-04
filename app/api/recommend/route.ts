@@ -5,16 +5,17 @@ import { Genre, Recommendation } from "@/types";
 const client = new Anthropic();
 
 const GENRE_LABELS: Record<Genre, string> = {
-  indie: "インディー/オルタナティブ（ポストパンク、ドリームポップ、シューゲイザーなども含む）",
+  indierock: "インディーロック/オルタナティブ（ポストパンク、シューゲイザー、ドリームポップ、ローファイ、ノイズロックなども含む。例：Pavement, Pixies, My Bloody Valentine, Sonic Youth, The Strokes, Arctic Monkeys, Yeah Yeah Yeahs, Interpol, Tame Impala, Vampire Weekend, Mac DeMarco, Parquet Courts, Big Thief, Wet Leg, Black Country New Road, Fontaines D.C.）",
+  indiepop: "インディーポップ/ネオアコースティック（UK Glasgow系のジャングリーギターポップ、Sarah Records系、トゥイー、ソフィスティポップ、スウェディッシュ・インディーポップなど。例：Orange Juice, Aztec Camera, The Pastels, The Field Mice, The Smiths, Belle and Sebastian, Prefab Sprout, The Blue Nile, Everything But the Girl, Camera Obscura, Stars, Beach Fossils, Real Estate, Alvvays, Frankie Cosmos, The Cardigans, Club 8, Jens Lekman, Peter Bjorn and John, Lykke Li, The Radio Dept., Acid House Kings, El Perro del Mar, Sambassadeur）",
   reggae: "レゲエ/スカ/ダブ/ロックステディ",
   electronic: "エレクトロニック/テクノ/ハウス/アンビエント",
   jazz: "ジャズ/ボッサノバ/モダンジャズ",
-  rock: "ロック（クラシックロックからポストロック、インディーロックまで）",
+  rock: "ロック（クラシックロックからポストロックまで。ただしインディーロックは別ジャンル扱い）",
   soul: "ソウル/R&B/ファンク/ネオソウル",
   world: "ワールドミュージック（アフロビート、ラテン、中東、アジア民族音楽など）",
   hiphop: "ヒップホップ（ジャジーヒップホップ、実験系、クラシックまで）",
   folk: "フォーク/シンガーソングライター",
-  citypop: "シティポップ/ネオアコ（日本のシティポップ・渋谷系、スコットランド・イギリス・アメリカ・北欧などのネオアコースティック、AORの影響を受けたポップ全般。台湾・香港・東南アジアのインディーポップも含む。例：山下達郎、竹内まりや、ピチカート・ファイヴ、The Blue Nile、Everything But the Girl、The Field Mice、Prefab Sprout、Phum Viphurit、落日飛車）",
+  citypop: "シティポップ（70s-80s日本のシティポップ黄金期、渋谷系、現代のシティポップ・リバイバル、および台湾・タイ・香港などアジア圏のシティポップ影響下にある作品。例：山下達郎、竹内まりや、大瀧詠一、細野晴臣、大貫妙子、角松敏生、松原みき、杏里、八神純子、吉田美奈子、ピチカート・ファイヴ、Cornelius、Flipper's Guitar、Lamp、Suchmos、never young beach、cero、落日飛車（Sunset Rollercoaster）、Phum Viphurit）",
   lucky: "",
 };
 
@@ -22,7 +23,9 @@ const GENRE_LABELS: Record<Genre, string> = {
 const DECADES = ["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "early 2020s"];
 const REGIONS: Record<string, string[]> = {
   default: ["Japan", "UK", "USA", "France", "Brazil", "Nigeria", "Sweden", "Australia", "South Korea", "Germany", "Iceland", "Jamaica"],
-  citypop: ["Japan", "Japan", "Japan", "UK", "Scotland", "USA", "Taiwan", "Hong Kong", "Thailand", "Philippines", "Sweden", "Norway"],
+  indierock: ["UK", "USA", "USA", "Australia", "Iceland", "Canada", "France", "Japan"],
+  indiepop: ["UK", "Scotland", "Sweden", "Sweden", "USA", "Japan", "Norway", "Australia"],
+  citypop: ["Japan", "Japan", "Japan", "Japan", "Taiwan", "Thailand", "Hong Kong"],
   reggae: ["Jamaica", "Jamaica", "Jamaica", "UK", "USA", "Trinidad and Tobago", "Nigeria"],
   world: ["Nigeria", "Brazil", "Cuba", "Mali", "Senegal", "Colombia", "Ethiopia", "Algeria", "Portugal", "India", "Japan"],
 };

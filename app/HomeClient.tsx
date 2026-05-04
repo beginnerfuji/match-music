@@ -6,7 +6,8 @@ import YouTubePlayer from "@/components/YouTubePlayer";
 import HistoryCard from "@/components/HistoryCard";
 
 const GENRES: { value: Genre; label: string; emoji: string; description: string; artists: string }[] = [
-  { value: "indie", label: "インディー/オルタナ", emoji: "🎸", description: "メジャーに染まらない、尖ったギターサウンド", artists: "The Strokes, Arctic Monkeys, Vampire Weekend, Tame Impala" },
+  { value: "indierock", label: "インディーロック/オルタナ", emoji: "🎸", description: "メジャーに染まらない、尖ったギターサウンド", artists: "The Strokes, Arctic Monkeys, Pavement, My Bloody Valentine, Tame Impala, Big Thief, Wet Leg" },
+  { value: "indiepop", label: "インディーポップ/ネオアコ", emoji: "🌼", description: "ジャングリーで甘酸っぱい、繊細なギターポップ", artists: "Belle and Sebastian, The Field Mice, Camera Obscura, Alvvays, The Cardigans, Jens Lekman, The Radio Dept." },
   { value: "reggae", label: "レゲエ/スカ/ダブ", emoji: "🌴", description: "ジャマイカ発、グルーヴとメッセージが宿る音楽", artists: "The Paragons, Bob Marley, Toots & the Maytals, Lee Scratch Perry" },
   { value: "electronic", label: "エレクトロニック", emoji: "🎛️", description: "機械と人間の境界を揺さぶるダンスミュージック", artists: "Aphex Twin, Four Tet, Daft Punk, Caribou, Burial" },
   { value: "jazz", label: "ジャズ/ボッサ", emoji: "🎷", description: "即興と洗練が交差する、大人のための音楽", artists: "Laufey, Bill Evans, João Gilberto, Chet Baker, Norah Jones" },
@@ -15,7 +16,7 @@ const GENRES: { value: Genre; label: string; emoji: string; description: string;
   { value: "world", label: "ワールド", emoji: "🌍", description: "地球のどこかで生まれた、知られざる名曲たち", artists: "Fela Kuti, Buena Vista Social Club, Tinariwen, Os Mutantes" },
   { value: "hiphop", label: "ヒップホップ", emoji: "🎧", description: "ビートとライムで語られる、ストリートの詩", artists: "A Tribe Called Quest, Kendrick Lamar, J Dilla, MF DOOM" },
   { value: "folk", label: "フォーク/SSW", emoji: "🪕", description: "一本のギターと声だけで伝わる、本音の歌", artists: "Joni Mitchell, Phoebe Bridgers, Nick Drake, Sufjan Stevens" },
-  { value: "citypop", label: "シティポップ/ネオアコ", emoji: "🌃", description: "渋谷系からネオアコまで、洗練されたポップの系譜", artists: "山下達郎, Phum Viphurit, 落日飛車, The Blue Nile, Everything But the Girl" },
+  { value: "citypop", label: "シティポップ", emoji: "🌃", description: "都会の夜と海岸線、洗練された日本のポップスとその系譜", artists: "山下達郎, 竹内まりや, 細野晴臣, 大貫妙子, Lamp, 落日飛車, Phum Viphurit" },
 ];
 
 const STORAGE_KEY = "daily-tune-history";
@@ -43,7 +44,7 @@ function saveToHistory(rec: Recommendation) {
 }
 
 export default function HomeClient() {
-  const [selectedGenre, setSelectedGenre] = useState<Genre>("indie");
+  const [selectedGenre, setSelectedGenre] = useState<Genre>("indierock");
   const [selectedDecades, setSelectedDecades] = useState<string[]>(["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"]);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
