@@ -56,9 +56,10 @@ export default function HomeClient() {
     setHistory(loadHistory());
   }, []);
 
-  const fetchVideoId = useCallback(async (query: string): Promise<string | null> => {
+  const fetchVideoId = useCallback(async (query: string, artist: string, title: string): Promise<string | null> => {
     try {
-      const res = await fetch(`/api/youtube?q=${encodeURIComponent(query)}`);
+      const params = new URLSearchParams({ q: query, artist, title });
+      const res = await fetch(`/api/youtube?${params.toString()}`);
       const data = await res.json();
       return data.videoId ?? null;
     } catch {
@@ -81,7 +82,7 @@ export default function HomeClient() {
       if (!res.ok) throw new Error("推薦の取得に失敗しました");
 
       const rec: Recommendation = await res.json();
-      const videoId = await fetchVideoId(rec.youtubeQuery);
+      const videoId = await fetchVideoId(rec.youtubeQuery, rec.artist, rec.title);
       rec.youtubeVideoId = videoId ?? undefined;
 
       setRecommendation(rec);
