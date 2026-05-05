@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Genre, Recommendation } from "@/types";
+import { GENRE_DECADES, Genre, Recommendation } from "@/types";
 import YouTubePlayer from "@/components/YouTubePlayer";
 import HistoryCard from "@/components/HistoryCard";
 
@@ -45,7 +45,8 @@ function saveToHistory(rec: Recommendation) {
 
 export default function HomeClient() {
   const [selectedGenre, setSelectedGenre] = useState<Genre>("indierock");
-  const [selectedDecades, setSelectedDecades] = useState<string[]>(["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"]);
+  const [selectedDecades, setSelectedDecades] = useState<string[]>(GENRE_DECADES.indierock);
+  const availableDecades = GENRE_DECADES[selectedGenre];
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +95,15 @@ export default function HomeClient() {
       setLoading(false);
     }
   }, [selectedGenre, fetchVideoId]);
+
+  const handleGenreSelect = useCallback((genre: Genre) => {
+    setSelectedGenre(genre);
+    const valid = GENRE_DECADES[genre];
+    setSelectedDecades((prev) => {
+      const filtered = prev.filter((d) => valid.includes(d));
+      return filtered.length > 0 ? filtered : valid;
+    });
+  }, []);
 
   const handleHistoryClick = useCallback((item: Recommendation) => {
     setRecommendation(item);
@@ -150,7 +160,7 @@ export default function HomeClient() {
               {GENRES.map((g) => (
                 <div key={g.value} className="relative group">
                   <button
-                    onClick={() => setSelectedGenre(g.value)}
+                    onClick={() => handleGenreSelect(g.value)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
                     style={{
                       border: `1px solid ${selectedGenre === g.value ? "var(--foreground)" : "var(--border)"}`,
@@ -179,7 +189,7 @@ export default function HomeClient() {
             <p className="text-xs tracking-widest uppercase mb-3" style={{ color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
               Decade
               <button
-                onClick={() => setSelectedDecades(["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"])}
+                onClick={() => setSelectedDecades(availableDecades)}
                 className="ml-3 normal-case tracking-normal transition-opacity hover:opacity-60"
                 style={{ color: "var(--accent)" }}
               >
@@ -187,7 +197,7 @@ export default function HomeClient() {
               </button>
             </p>
             <div className="flex flex-wrap gap-2">
-              {["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"].map((d) => {
+              {availableDecades.map((d) => {
                 const isSelected = selectedDecades.includes(d);
                 return (
                   <button

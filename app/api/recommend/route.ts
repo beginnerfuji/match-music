@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { Genre, Recommendation } from "@/types";
+import { ALL_DECADES, GENRE_DECADES, Genre, Recommendation } from "@/types";
 
 const client = new Anthropic();
 
@@ -19,26 +19,8 @@ const GENRE_LABELS: Record<Genre, string> = {
   lucky: "",
 };
 
-// Randomly pick decade and region to add serendipity
-const ALL_DECADES = ["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "early 2020s"];
-
-// Decades when each genre meaningfully exists. Combinations outside this set
-// (e.g. 1970s indiepop, 1960s hiphop) are filtered out before random pick.
-const GENRE_DECADES: Record<Genre, string[]> = {
-  indierock:  ["1980s", "1990s", "2000s", "2010s", "early 2020s"],
-  indiepop:   ["1980s", "1990s", "2000s", "2010s", "early 2020s"],
-  citypop:    ["1970s", "1980s", "2010s", "early 2020s"], // 90s-00s is a citypop dead zone
-  hiphop:     ["1980s", "1990s", "2000s", "2010s", "early 2020s"],
-  electronic: ["1970s", "1980s", "1990s", "2000s", "2010s", "early 2020s"],
-  reggae:     ALL_DECADES,
-  jazz:       ALL_DECADES,
-  rock:       ALL_DECADES,
-  soul:       ALL_DECADES,
-  world:      ALL_DECADES,
-  folk:       ALL_DECADES,
-  lucky:      ALL_DECADES,
-};
-
+// Random region pick adds serendipity. Each region carries an optional `from`
+// decade — used to prune impossible combinations like Taiwan citypop in 1970s.
 interface RegionEntry {
   region: string;
   from?: string; // earliest decade where this region's genre scene meaningfully exists
