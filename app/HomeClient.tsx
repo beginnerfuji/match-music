@@ -98,11 +98,7 @@ export default function HomeClient() {
 
   const handleGenreSelect = useCallback((genre: Genre) => {
     setSelectedGenre(genre);
-    const valid = GENRE_DECADES[genre];
-    setSelectedDecades((prev) => {
-      const filtered = prev.filter((d) => valid.includes(d));
-      return filtered.length > 0 ? filtered : valid;
-    });
+    setSelectedDecades(GENRE_DECADES[genre]);
   }, []);
 
   const handleHistoryClick = useCallback((item: Recommendation) => {
