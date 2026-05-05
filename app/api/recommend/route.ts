@@ -20,18 +20,113 @@ const GENRE_LABELS: Record<Genre, string> = {
 };
 
 // Randomly pick decade and region to add serendipity
-const DECADES = ["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "early 2020s"];
-const REGIONS: Record<string, string[]> = {
-  default: ["Japan", "UK", "USA", "France", "Brazil", "Nigeria", "Sweden", "Australia", "South Korea", "Germany", "Iceland", "Jamaica"],
-  indierock: ["UK", "USA", "USA", "Australia", "Iceland", "Canada", "France", "Japan"],
-  indiepop: ["UK", "Scotland", "Sweden", "Sweden", "USA", "Japan", "Norway", "Australia"],
-  citypop: ["Japan", "Japan", "Japan", "Japan", "Taiwan", "Thailand", "Hong Kong"],
-  reggae: ["Jamaica", "Jamaica", "Jamaica", "UK", "USA", "Trinidad and Tobago", "Nigeria"],
-  world: ["Nigeria", "Brazil", "Cuba", "Mali", "Senegal", "Colombia", "Ethiopia", "Algeria", "Portugal", "India", "Japan"],
+const ALL_DECADES = ["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "early 2020s"];
+
+// Decades when each genre meaningfully exists. Combinations outside this set
+// (e.g. 1970s indiepop, 1960s hiphop) are filtered out before random pick.
+const GENRE_DECADES: Record<Genre, string[]> = {
+  indierock:  ["1980s", "1990s", "2000s", "2010s", "early 2020s"],
+  indiepop:   ["1980s", "1990s", "2000s", "2010s", "early 2020s"],
+  citypop:    ["1970s", "1980s", "2010s", "early 2020s"], // 90s-00s is a citypop dead zone
+  hiphop:     ["1980s", "1990s", "2000s", "2010s", "early 2020s"],
+  electronic: ["1970s", "1980s", "1990s", "2000s", "2010s", "early 2020s"],
+  reggae:     ALL_DECADES,
+  jazz:       ALL_DECADES,
+  rock:       ALL_DECADES,
+  soul:       ALL_DECADES,
+  world:      ALL_DECADES,
+  folk:       ALL_DECADES,
+  lucky:      ALL_DECADES,
+};
+
+interface RegionEntry {
+  region: string;
+  from?: string; // earliest decade where this region's genre scene meaningfully exists
+}
+
+const DEFAULT_REGIONS: RegionEntry[] = [
+  { region: "Japan" },
+  { region: "UK" },
+  { region: "USA" },
+  { region: "France" },
+  { region: "Brazil" },
+  { region: "Nigeria" },
+  { region: "Sweden" },
+  { region: "Australia" },
+  { region: "South Korea" },
+  { region: "Germany" },
+  { region: "Iceland", from: "1990s" },
+  { region: "Jamaica" },
+];
+
+const GENRE_REGIONS: Partial<Record<Genre, RegionEntry[]>> = {
+  indierock: [
+    { region: "UK" },
+    { region: "USA" },
+    { region: "USA" },
+    { region: "Australia" },
+    { region: "Iceland", from: "1990s" },
+    { region: "Canada" },
+    { region: "France", from: "1990s" },
+    { region: "Japan" },
+  ],
+  indiepop: [
+    { region: "UK" },
+    { region: "Scotland" },
+    { region: "Sweden", from: "1990s" },
+    { region: "Sweden", from: "1990s" },
+    { region: "USA" },
+    { region: "Japan", from: "2000s" },
+    { region: "Norway", from: "1990s" },
+    { region: "Australia" },
+  ],
+  citypop: [
+    { region: "Japan" },
+    { region: "Japan" },
+    { region: "Japan" },
+    { region: "Japan" },
+    { region: "Taiwan", from: "2010s" },
+    { region: "Thailand", from: "2010s" },
+    { region: "Hong Kong" },
+  ],
+  reggae: [
+    { region: "Jamaica" },
+    { region: "Jamaica" },
+    { region: "Jamaica" },
+    { region: "UK", from: "1970s" },
+    { region: "USA" },
+    { region: "Trinidad and Tobago" },
+    { region: "Nigeria", from: "1980s" },
+  ],
+  hiphop: [
+    { region: "USA" },
+    { region: "USA" },
+    { region: "USA" },
+    { region: "UK", from: "1990s" },
+    { region: "France", from: "1990s" },
+    { region: "Japan", from: "1990s" },
+  ],
+  world: [
+    { region: "Nigeria" },
+    { region: "Brazil" },
+    { region: "Cuba" },
+    { region: "Mali" },
+    { region: "Senegal" },
+    { region: "Colombia" },
+    { region: "Ethiopia" },
+    { region: "Algeria" },
+    { region: "Portugal" },
+    { region: "India" },
+    { region: "Japan" },
+  ],
 };
 
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function decadeIndex(d: string): number {
+  return ALL_DECADES.indexOf(d);
 }
 
 export async function POST(req: NextRequest) {
@@ -42,16 +137,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "genre and date are required" }, { status: 400 });
     }
 
-    const decadePool = clientDecades && clientDecades.length > 0 ? clientDecades : DECADES;
-    const decade = pickRandom(decadePool);
-    const regionPool = REGIONS[genre] ?? REGIONS.default;
-    const region = pickRandom(regionPool);
-    const genreLabel = GENRE_LABELS[genre] ?? genre;
-
     const isLucky = genre === "lucky";
-    const genreInstruction = isLucky
-      ? `Genre: completely your choice — surprise us. Pick any genre, era, or region you feel is perfect for today. This is your moment to share something you genuinely love.`
-      : `Requested genre: ${genreLabel}\nConstraint for serendipity: Focus on music from the ${decade}, from ${region} (or influenced by that region/era).`;
+    let genreInstruction: string;
+
+    if (isLucky) {
+      genreInstruction = `Genre: completely your choice — surprise us. Pick any genre, era, or region you feel is perfect for today. This is your moment to share something you genuinely love.`;
+    } else {
+      // Pick decade from intersection of (client selection) ∩ (decades where this genre exists).
+      // Falls back to genre's full valid set if the intersection is empty.
+      const genreDecades = GENRE_DECADES[genre];
+      const clientPool = clientDecades && clientDecades.length > 0 ? clientDecades : ALL_DECADES;
+      const intersection = clientPool.filter((d) => genreDecades.includes(d));
+      const decadePool = intersection.length > 0 ? intersection : genreDecades;
+      const decade = pickRandom(decadePool);
+
+      // Pick region from genre's pool, filtered to those whose scene existed by `decade`.
+      const regionEntries = GENRE_REGIONS[genre] ?? DEFAULT_REGIONS;
+      const decadeIdx = decadeIndex(decade);
+      const validRegions = regionEntries.filter(
+        (r) => !r.from || decadeIndex(r.from) <= decadeIdx
+      );
+      const region = pickRandom(validRegions).region;
+
+      const genreLabel = GENRE_LABELS[genre] ?? genre;
+      genreInstruction = `Requested genre: ${genreLabel}\nConstraint for serendipity: Focus on music from the ${decade}, from ${region} (or influenced by that region/era).`;
+    }
 
     const prompt = `You are a seasoned music curator — imagine the owner of a beloved independent record shop in Shimokitazawa, Tokyo. You have encyclopedic knowledge across genres and eras, with a gift for finding songs that feel like a discovery: not obscure enough to alienate, but never obvious.
 
