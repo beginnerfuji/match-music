@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       // Genre and region stay open, but honor the user's decade selection.
       const clientPool = clientDecades && clientDecades.length > 0 ? clientDecades : ALL_DECADES;
       const decade = pickRandom(clientPool);
-      genreInstruction = `Genre: completely your choice — surprise us. Pick any genre, region, or scene you feel is perfect for today. This is your moment to share something you genuinely love.\nConstraint for serendipity: Focus on music from the ${decade}.`;
+      genreInstruction = `Genre: completely your choice — surprise us. Pick any genre, region, or scene you feel is perfect for today. This is your moment to share something you genuinely love.\nHARD REQUIREMENT: the recommended song MUST have been released in the ${decade}. Do not recommend tracks from any other era.`;
     } else {
       // Pick decade from intersection of (client selection) ∩ (decades where this genre exists).
       // Falls back to genre's full valid set if the intersection is empty.
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
       const region = pickRandom(validRegions).region;
 
       const genreLabel = GENRE_LABELS[genre] ?? genre;
-      genreInstruction = `Requested genre: ${genreLabel}\nConstraint for serendipity: Focus on music from the ${decade}, from ${region} (or influenced by that region/era).`;
+      genreInstruction = `Requested genre: ${genreLabel}\nHARD REQUIREMENT: the recommended song MUST have been released in the ${decade}. Do not recommend tracks from any other era.\nRegion preference: from ${region} (or influenced by that region/era — region is a soft preference, not strict).`;
     }
 
     const prompt = `You are a seasoned music curator — imagine the owner of a beloved independent record shop in Shimokitazawa, Tokyo. You have encyclopedic knowledge across genres and eras, with a gift for finding songs that feel like a discovery: not obscure enough to alienate, but never obvious.
