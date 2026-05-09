@@ -111,6 +111,13 @@ function decadeIndex(d: string): number {
   return ALL_DECADES.indexOf(d);
 }
 
+function decadeYearRange(d: string): { start: number; end: number } | null {
+  const m = d.match(/^(\d{4})s$/);
+  if (!m) return null;
+  const start = parseInt(m[1], 10);
+  return { start, end: start + 9 };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { genre, decades: clientDecades, date }: { genre: Genre; decades?: string[]; date: string } = await req.json();
@@ -121,43 +128,47 @@ export async function POST(req: NextRequest) {
 
     const isLucky = genre === "lucky";
     let genreInstruction: string;
+    let requiredDecade: string;
 
     if (isLucky) {
-      // Genre and region stay open, but honor the user's decade selection.
       const clientPool = clientDecades && clientDecades.length > 0 ? clientDecades : ALL_DECADES;
-      const decade = pickRandom(clientPool);
-      genreInstruction = `Genre: completely your choice — surprise us. Pick any genre, region, or scene you feel is perfect for today. This is your moment to share something you genuinely love.\nHARD REQUIREMENT: the recommended song MUST have been released in the ${decade}. Do not recommend tracks from any other era.`;
+      requiredDecade = pickRandom(clientPool);
+      genreInstruction = `Genre: completely your choice — surprise us. Pick any genre, region, or scene you feel is perfect for today. This is your moment to share something you genuinely love.`;
     } else {
       // Pick decade from intersection of (client selection) ∩ (decades where this genre exists).
-      // Falls back to genre's full valid set if the intersection is empty.
       const genreDecades = GENRE_DECADES[genre];
       const clientPool = clientDecades && clientDecades.length > 0 ? clientDecades : ALL_DECADES;
       const intersection = clientPool.filter((d) => genreDecades.includes(d));
       const decadePool = intersection.length > 0 ? intersection : genreDecades;
-      const decade = pickRandom(decadePool);
+      requiredDecade = pickRandom(decadePool);
 
       // Pick region from genre's pool, filtered to those whose scene existed by `decade`.
       const regionEntries = GENRE_REGIONS[genre] ?? DEFAULT_REGIONS;
-      const decadeIdx = decadeIndex(decade);
+      const decadeIdx = decadeIndex(requiredDecade);
       const validRegions = regionEntries.filter(
         (r) => !r.from || decadeIndex(r.from) <= decadeIdx
       );
       const region = pickRandom(validRegions).region;
 
       const genreLabel = GENRE_LABELS[genre] ?? genre;
-      genreInstruction = `Requested genre: ${genreLabel}\nHARD REQUIREMENT: the recommended song MUST have been released in the ${decade}. Do not recommend tracks from any other era.\nRegion preference: from ${region} (or influenced by that region/era — region is a soft preference, not strict).`;
+      genreInstruction = `Requested genre: ${genreLabel}\nRegion preference: from ${region} (or influenced by that region/era — region is soft).`;
     }
 
-    const prompt = `You are a seasoned music curator — imagine the owner of a beloved independent record shop in Shimokitazawa, Tokyo. You have encyclopedic knowledge across genres and eras, with a gift for finding songs that feel like a discovery: not obscure enough to alienate, but never obvious.
+    const range = decadeYearRange(requiredDecade);
+    const yearStart = range?.start ?? 0;
+    const yearEnd = range?.end ?? 9999;
+
+    const buildPrompt = (extra = "") => `You are a seasoned music curator — imagine the owner of a beloved independent record shop in Shimokitazawa, Tokyo. You have encyclopedic knowledge across genres and eras, with a gift for finding songs that feel like a discovery: not obscure enough to alienate, but never obvious.
 
 Today's date: ${date}
 ${genreInstruction}
 
-Your task: Recommend exactly ONE song that fits these criteria:
-- Well-known within its scene, but not a mainstream radio hit
-- Available on YouTube (at least ~1M views is a good proxy for findability)
-- Genuinely good — the kind of song a knowledgeable friend would be excited to share
-- Connects to the mood of the current season or day if possible (it's ${new Date(date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })})
+Your task: Recommend exactly ONE song that fits ALL these criteria (in priority order):
+1. RELEASE YEAR — the song MUST have been originally released between ${yearStart} and ${yearEnd} (inclusive). This is a hard requirement; verify the year before answering. If you cannot recall a song that fits, pick a different one — do NOT bend this rule.
+2. Well-known within its scene, but not a mainstream radio hit.
+3. Available on YouTube (at least ~1M views is a good proxy for findability).
+4. Genuinely good — the kind of song a knowledgeable friend would be excited to share.
+5. Connects to the mood of the current season or day if possible (it's ${new Date(date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}).${extra}
 
 Respond ONLY with a valid JSON object. No markdown, no explanation outside JSON.
 
@@ -173,19 +184,30 @@ Respond ONLY with a valid JSON object. No markdown, no explanation outside JSON.
   "mood": "one evocative Japanese phrase capturing the vibe (e.g. '夜明け前の静けさ')"
 }`;
 
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 512,
-      messages: [{ role: "user", content: prompt }],
-    });
+    async function generate(promptText: string) {
+      const message = await client.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 512,
+        messages: [{ role: "user", content: promptText }],
+      });
+      const text = message.content[0].type === "text" ? message.content[0].text : "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return null;
+      return JSON.parse(jsonMatch[0]);
+    }
 
-    const text = message.content[0].type === "text" ? message.content[0].text : "";
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    let parsed = await generate(buildPrompt());
+    if (!parsed) {
       return NextResponse.json({ error: "Failed to parse recommendation" }, { status: 500 });
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // If Claude ignored the decade constraint, retry once with explicit feedback.
+    if (range && (typeof parsed.year !== "number" || parsed.year < yearStart || parsed.year > yearEnd)) {
+      const retryNote = `\n\nPREVIOUS ATTEMPT FAILED VALIDATION: You returned "${parsed.title}" by ${parsed.artist} (year ${parsed.year}), but ${parsed.year} is OUTSIDE the required range ${yearStart}–${yearEnd}. Pick a DIFFERENT song actually released within that range. Do not return the same song.`;
+      const retried = await generate(buildPrompt(retryNote));
+      if (retried) parsed = retried;
+    }
+
     const recommendation: Recommendation = {
       ...parsed,
       genre,
