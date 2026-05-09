@@ -292,6 +292,12 @@ export default function HomeClient() {
                         <span className="text-xs" style={{ color: "var(--muted)" }}>{recommendation.country}</span>
                       </>
                     )}
+                    {recommendation.genreLabel && (
+                      <>
+                        <span style={{ color: "var(--border)" }}>·</span>
+                        <span className="text-xs" style={{ color: "var(--muted)" }}>{recommendation.genreLabel}</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <a

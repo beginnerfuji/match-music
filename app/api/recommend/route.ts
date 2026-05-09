@@ -166,6 +166,7 @@ Respond ONLY with a valid JSON object. No markdown, no explanation outside JSON.
   "artist": "artist name",
   "year": 1234,
   "country": "country of origin in Japanese (e.g. 'アメリカ', 'イギリス', '日本', 'ブラジル')",
+  "genreLabel": "specific Japanese genre label for THIS song (e.g. 'シューゲイザー', 'ネオソウル', 'アンビエント', 'シティポップ', 'ジャズ・ファンク'). Be specific to the song — sub-genres are welcome.",
   "description": "1 sentence in Japanese describing what kind of song this is — tempo, instruments, atmosphere. Write as a passionate record store clerk talking directly to a customer (e.g. 'ゆったりしたテンポにアコースティックギターとファルセットが絡み合って、聴いた瞬間に引き込まれますよ。')",
   "youtubeQuery": "best search string to find this exact song on YouTube (artist + title + year or 'official')",
   "reason": "2–3 sentences in Japanese, written as a knowledgeable and enthusiastic record store clerk recommending this song to a customer. Be specific, warm, and a little passionate — like you genuinely love this record. Mention why it's special within its genre, any interesting backstory, and why it feels right for today.",

@@ -16,6 +16,7 @@ export interface Recommendation {
   title: string;
   artist: string;
   genre: Genre;
+  genreLabel?: string; // free-form Japanese label for display (e.g. "ネオソウル", "アンビエント")
   year: number;
   country: string;
   description: string;
