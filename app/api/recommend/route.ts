@@ -184,39 +184,20 @@ Respond ONLY with a valid JSON object. No markdown, no explanation outside JSON.
   "mood": "one evocative Japanese phrase capturing the vibe (e.g. '夜明け前の静けさ')"
 }`;
 
-    const SYSTEM_PROMPT = `You are a music curator. Year-of-release constraints from the user are non-negotiable. If the prompt specifies a year range, the song you recommend MUST have been originally released within that range. If you cannot recall a fitting song, pick a different one — never bend the year, never substitute the constraint with "close enough", never include songs that are merely associated with the era.`;
-
-    async function generate(promptText: string) {
-      const message = await client.messages.create({
-        model: "claude-sonnet-4-6",
-        max_tokens: 512,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: promptText }],
-      });
-      const text = message.content[0].type === "text" ? message.content[0].text : "";
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return null;
-      return JSON.parse(jsonMatch[0]);
-    }
-
-    const MAX_ATTEMPTS = 3;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let parsed: any = null;
-    let lastFailNote = "";
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      const candidate = await generate(buildPrompt(lastFailNote));
-      if (!candidate) {
-        lastFailNote = `\n\nPREVIOUS ATTEMPT FAILED: response was not valid JSON.`;
-        continue;
-      }
-      const yearOK = !range || (typeof candidate.year === "number" && candidate.year >= yearStart && candidate.year <= yearEnd);
-      parsed = candidate; // keep latest as fallback
-      if (yearOK) break;
-      console.warn(`[recommend] attempt ${attempt + 1}/${MAX_ATTEMPTS} returned out-of-range year: ${candidate.title} / ${candidate.artist} (${candidate.year}) not in ${yearStart}-${yearEnd}`);
-      lastFailNote = `\n\nPREVIOUS ATTEMPT FAILED VALIDATION: You returned "${candidate.title}" by ${candidate.artist} (year ${candidate.year}), but ${candidate.year} is OUTSIDE the required range ${yearStart}–${yearEnd}. Pick a COMPLETELY DIFFERENT song that was actually released between ${yearStart} and ${yearEnd}. Do not return the same song or the same artist.`;
-    }
-    if (!parsed) {
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 512,
+      messages: [{ role: "user", content: buildPrompt() }],
+    });
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
       return NextResponse.json({ error: "Failed to parse recommendation" }, { status: 500 });
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    if (range && (typeof parsed.year !== "number" || parsed.year < yearStart || parsed.year > yearEnd)) {
+      console.warn(`[recommend] year out of range: ${parsed.title} / ${parsed.artist} (${parsed.year}) not in ${yearStart}-${yearEnd}`);
     }
 
     const recommendation: Recommendation = {
