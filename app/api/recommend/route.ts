@@ -158,24 +158,30 @@ export async function POST(req: NextRequest) {
     const yearStart = range?.start ?? 0;
     const yearEnd = range?.end ?? 9999;
 
-    const buildPrompt = (extra = "") => `You are a seasoned music curator — imagine the owner of a beloved independent record shop in Shimokitazawa, Tokyo. You have encyclopedic knowledge across genres and eras, with a gift for finding songs that feel like a discovery: not obscure enough to alienate, but never obvious.
+    const buildPrompt = () => `You are a seasoned music curator — imagine the owner of a beloved independent record shop in Shimokitazawa, Tokyo.
 
-Today's date: ${date}
+# Your task
+
+Recommend exactly ONE song originally released between ${yearStart} and ${yearEnd} (inclusive — this is the ${requiredDecade}). The release-year range is the single most important constraint — if a song you're considering is outside this range, discard it and think of a different one.
+
 ${genreInstruction}
 
-Your task: Recommend exactly ONE song that fits ALL these criteria (in priority order):
-1. RELEASE YEAR — the song MUST have been originally released between ${yearStart} and ${yearEnd} (inclusive). This is a hard requirement; verify the year before answering. If you cannot recall a song that fits, pick a different one — do NOT bend this rule.
-2. Well-known within its scene, but not a mainstream radio hit.
-3. Available on YouTube (at least ~1M views is a good proxy for findability).
-4. Genuinely good — the kind of song a knowledgeable friend would be excited to share.
-5. Connects to the mood of the current season or day if possible (it's ${new Date(date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}).${extra}
+# Other criteria
+- Well-known within its scene, but not a mainstream radio hit.
+- Available on YouTube (at least ~1M views is a good proxy for findability).
+- Genuinely good — the kind of song a knowledgeable friend would be excited to share.
+- Connects to the mood of today (${new Date(date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}) if possible.
 
-Respond ONLY with a valid JSON object. No markdown, no explanation outside JSON.
+# Response format
+
+Respond ONLY with a valid JSON object — no markdown, no commentary outside JSON.
+
+Before you write the JSON: verify that the song's actual release year is between ${yearStart} and ${yearEnd}. If it isn't, replace it with a different song.
 
 {
   "title": "song title in original language",
   "artist": "artist name",
-  "year": 1234,
+  "year": <integer between ${yearStart} and ${yearEnd}, no exceptions>,
   "country": "country of origin in Japanese (e.g. 'アメリカ', 'イギリス', '日本', 'ブラジル')",
   "genreLabel": "specific Japanese genre label for THIS song (e.g. 'シューゲイザー', 'ネオソウル', 'アンビエント', 'シティポップ', 'ジャズ・ファンク'). Be specific to the song — sub-genres are welcome.",
   "description": "1 sentence in Japanese describing what kind of song this is — tempo, instruments, atmosphere. Write as a passionate record store clerk talking directly to a customer (e.g. 'ゆったりしたテンポにアコースティックギターとファルセットが絡み合って、聴いた瞬間に引き込まれますよ。')",
