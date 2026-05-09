@@ -123,7 +123,10 @@ export async function POST(req: NextRequest) {
     let genreInstruction: string;
 
     if (isLucky) {
-      genreInstruction = `Genre: completely your choice — surprise us. Pick any genre, era, or region you feel is perfect for today. This is your moment to share something you genuinely love.`;
+      // Genre and region stay open, but honor the user's decade selection.
+      const clientPool = clientDecades && clientDecades.length > 0 ? clientDecades : ALL_DECADES;
+      const decade = pickRandom(clientPool);
+      genreInstruction = `Genre: completely your choice — surprise us. Pick any genre, region, or scene you feel is perfect for today. This is your moment to share something you genuinely love.\nConstraint for serendipity: Focus on music from the ${decade}.`;
     } else {
       // Pick decade from intersection of (client selection) ∩ (decades where this genre exists).
       // Falls back to genre's full valid set if the intersection is empty.
