@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { GENRE_DECADES, Genre, Recommendation } from "@/types";
+import { FESTIVAL_LINEUPS, GENRE_DECADES, Genre, Recommendation } from "@/types";
 import YouTubePlayer from "@/components/YouTubePlayer";
 import HistoryCard from "@/components/HistoryCard";
 
@@ -68,7 +68,7 @@ export default function HomeClient() {
     }
   }, []);
 
-  const handleRecommend = useCallback(async (genre: Genre = selectedGenre) => {
+  const fetchAndShow = useCallback(async (body: object) => {
     setLoading(true);
     setError(null);
     setRecommendation(null);
@@ -77,7 +77,7 @@ export default function HomeClient() {
       const res = await fetch("/api/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ genre, decades: selectedDecades, date: getTodayString() }),
+        body: JSON.stringify({ ...body, date: getTodayString() }),
       });
 
       if (!res.ok) throw new Error("推薦の取得に失敗しました");
@@ -94,7 +94,15 @@ export default function HomeClient() {
     } finally {
       setLoading(false);
     }
-  }, [selectedGenre, fetchVideoId]);
+  }, [fetchVideoId]);
+
+  const handleRecommend = useCallback((genre: Genre = selectedGenre) => {
+    return fetchAndShow({ genre, decades: selectedDecades });
+  }, [fetchAndShow, selectedGenre, selectedDecades]);
+
+  const handleRecommendFestival = useCallback((festivalKey: string) => {
+    return fetchAndShow({ festival: festivalKey });
+  }, [fetchAndShow]);
 
   const handleGenreSelect = useCallback((genre: Genre) => {
     setSelectedGenre(genre);
@@ -263,6 +271,31 @@ export default function HomeClient() {
                 ジャンルを問わず、今日の一曲をランダムに提案
               </p>
             </div>
+
+            <div className="flex flex-col gap-1 w-full">
+              <div className="flex gap-2 w-full">
+                {Object.entries(FESTIVAL_LINEUPS).map(([key, fest]) => (
+                  <button
+                    key={key}
+                    onClick={() => handleRecommendFestival(key)}
+                    disabled={loading}
+                    className="flex-1 py-3 text-xs font-medium tracking-wide transition-opacity disabled:opacity-40 flex items-center justify-center gap-1.5"
+                    style={{
+                      border: "1px solid var(--border)",
+                      color: "var(--muted)",
+                      borderRadius: "2px",
+                      background: "transparent",
+                    }}
+                  >
+                    <span>{fest.emoji}</span>
+                    <span>{fest.label}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-center" style={{ color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                出演アーティストから1曲ランダム
+              </p>
+            </div>
           </div>
 
           {/* Error */}
@@ -278,6 +311,11 @@ export default function HomeClient() {
               {/* Title block */}
               <div className="flex items-start justify-between gap-4">
                 <div>
+                  {recommendation.festival && (
+                    <p className="text-xs tracking-widest uppercase mb-2" style={{ color: "var(--accent)", fontFamily: "var(--font-mono)" }}>
+                      🎪 {recommendation.festival}
+                    </p>
+                  )}
                   <h2 style={{ fontFamily: "var(--font-serif)" }} className="text-3xl font-bold leading-tight">
                     {recommendation.title}
                   </h2>

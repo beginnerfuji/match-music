@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { ALL_DECADES, GENRE_DECADES, Genre, Recommendation } from "@/types";
+import { ALL_DECADES, FESTIVAL_LINEUPS, GENRE_DECADES, Genre, Recommendation } from "@/types";
 
 const client = new Anthropic();
 
@@ -120,10 +120,67 @@ function decadeYearRange(d: string): { start: number; end: number } | null {
 
 export async function POST(req: NextRequest) {
   try {
-    const { genre, decades: clientDecades, date }: { genre: Genre; decades?: string[]; date: string } = await req.json();
+    const body = await req.json();
+    const date: string | undefined = body.date;
+    if (!date) {
+      return NextResponse.json({ error: "date is required" }, { status: 400 });
+    }
 
-    if (!genre || !date) {
-      return NextResponse.json({ error: "genre and date are required" }, { status: 400 });
+    // Festival mode: pick a random artist from the lineup, ask Claude for one song.
+    const festivalKey: string | undefined = body.festival;
+    if (festivalKey && festivalKey in FESTIVAL_LINEUPS) {
+      const festival = FESTIVAL_LINEUPS[festivalKey];
+      const artist = pickRandom(festival.artists);
+      const festivalPrompt = `You are a seasoned music curator — imagine the owner of a beloved independent record shop in Shimokitazawa, Tokyo.
+
+# Your task
+
+Recommend exactly ONE song by ${artist}. ${artist} is performing at ${festival.label}, so this is a great moment to introduce a customer to their music. Pick a track that genuinely represents what they're about — not necessarily their biggest mainstream hit, but a song a knowledgeable fan would be excited to share. It can be from any era of their career.
+
+# Other criteria
+- Available on YouTube (at least ~100k views is a reasonable proxy for findability).
+- Genuinely good — the kind of track that makes someone curious to dig further into the artist.
+
+# Response format
+
+Respond ONLY with a valid JSON object — no markdown, no commentary outside JSON.
+
+{
+  "title": "song title in original language",
+  "artist": "${artist}",
+  "year": <integer release year>,
+  "country": "country of origin in Japanese (e.g. 'アメリカ', 'イギリス', '日本')",
+  "genreLabel": "specific Japanese genre label for THIS song (e.g. 'シューゲイザー', 'ネオソウル', 'シティポップ').",
+  "description": "1 sentence in Japanese describing what kind of song this is — tempo, instruments, atmosphere. Write as a passionate record store clerk talking directly to a customer.",
+  "youtubeQuery": "best search string to find this exact song on YouTube (artist + title + 'official')",
+  "reason": "2–3 sentences in Japanese, written as a knowledgeable and enthusiastic record store clerk. Mention what makes ${artist} special, why this song is a good entry point, and a little context about why hearing them at ${festival.label} would be exciting.",
+  "mood": "one evocative Japanese phrase capturing the vibe (e.g. '夜明け前の静けさ')"
+}`;
+
+      const message = await client.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 512,
+        messages: [{ role: "user", content: festivalPrompt }],
+      });
+      const text = message.content[0].type === "text" ? message.content[0].text : "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return NextResponse.json({ error: "Failed to parse recommendation" }, { status: 500 });
+      }
+      const parsed = JSON.parse(jsonMatch[0]);
+      const recommendation: Recommendation = {
+        ...parsed,
+        genre: "lucky", // genre union doesn't include festival mode; lucky is a no-op placeholder
+        festival: festival.label,
+        date,
+      };
+      return NextResponse.json(recommendation);
+    }
+
+    const genre: Genre | undefined = body.genre;
+    const clientDecades: string[] | undefined = body.decades;
+    if (!genre) {
+      return NextResponse.json({ error: "genre is required" }, { status: 400 });
     }
 
     const isLucky = genre === "lucky";
